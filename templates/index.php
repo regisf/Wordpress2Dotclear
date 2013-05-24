@@ -1,3 +1,15 @@
+<?php
+# -- BEGIN LICENSE BLOCK ---------------------------------------
+#
+# Wordpress importer for Dotclear
+#
+# Copyright (c) 2013 Régis FLORET
+# Licensed under the GPL version 2.0 license.
+# See LICENSE file or
+# http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+#
+# -- END LICENSE BLOCK -----------------------------------------
+?>
 <html>
     <head>
         <title><?php echo(__('Wordpress 2 Dotclear')); ?></title>
