@@ -16,7 +16,7 @@ if (!defined('DC_CONTEXT_ADMIN')) { return; }
         $filePath = $wp2dc->uploadFile();
         if ($filePath) {
             $wp2dc->processFile($filePath);
-            //$msg = __('Everything goes fine. Your Wordpress blog is now a Dotclear blog. Enjoy.');
+            $msg = __('Everything goes fine. Your Wordpress blog is now a Dotclear blog. Enjoy.');
         } else {
             $core->error->add($wp2dc->error());
         }

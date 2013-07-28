@@ -9,8 +9,11 @@
 # http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 #
 # -- END LICENSE BLOCK -----------------------------------------
-const WORDPRESSXML = 'wordpressxml';
+DEFINE('WORDPRESSXML', 'wordpressxml');
 
+/*
+ * Main plugin class
+ */
 class wp2dc {
     private $filename;
     private $uploadDirectory;
@@ -18,6 +21,10 @@ class wp2dc {
     private $core;
     private $layer;
 
+    /*
+     * Constructor
+     * @param dcCore $core Dotclear core class
+     */
     public function __construct($core) {
         $this->uploadDirectory = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR;
         $this->core = $core;
@@ -173,6 +180,7 @@ class wp2dc {
     }
 
     private function _doArticle(DOMNodeList $articleNode) {
+        $user = '';
         $title = '';
         $link = '';
         $pubDate = '';
@@ -193,6 +201,10 @@ class wp2dc {
             }
 
             switch ($articleNode->item($i)->nodeName) {
+                case 'dc:creator':
+                    $user = $articleNode->item($i)->nodeValue;
+                    break;
+
                 case 'title':
                     $title = $articleNode->item($i)->nodeValue;
                     break;
@@ -207,6 +219,8 @@ class wp2dc {
 
                 case 'content:encoded':
                     $content = $articleNode->item($i)->nodeValue;
+                    # Dotclear don't accept empty content
+                    $content = $content == '' ? __('No Content') : $content;
                     break;
 
                 case 'excerpt:encoded':
@@ -263,6 +277,7 @@ class wp2dc {
         }
 
         return array(
+            'user' => $user,
             'title' => $title,
             'link' => $link,
             'pubDate' => $pubDate,
@@ -330,8 +345,29 @@ class wp2dc {
         unset($cur);
     }
 
-    private function _addArticles($articles) {
+    private function _findUserOrAdmin($username) {
+        if ($this->core->userExists($username)) {
+            return $username;
+        }
+        $r = $this->core->con->select('SELECT user_id FROM ' . $this->core->blog->prefix  . 'user WHERE user_super=1 LIMIT 1');
+        return ($r->user_id);
+    }
 
+    private function _addArticles($articles) {
+        $cur = $this->core->con->openCursor($this->core->prefix . 'post');
+        foreach($articles as $article) {
+            $cur->post_title = trim($article['title']) == '' ? 'NO TITLE' : trim($article['title']);
+            $cur->blog_id = $this->core->blog->id;
+            $cur->user_id = $this->_findUserOrAdmin($article['user']);
+            $cur->post_type = $article['type'];
+            $cur->post_url = $article['link'];
+            $cur->post_content = $article['content'];
+            $cur->post_excerpt = $article['excerpt'];
+            $cur->post_status = $article['status'] == 'publish' ? 1 : 0;
+            $cur->post_dt = $article['pubDate'];
+
+            $this->core->blog->addPost($cur);
+        }
     }
 
     /** Process the file.
@@ -378,11 +414,9 @@ class wp2dc {
         $this->_changeBlogInformations($blogtitle, $description);
         $this->_addCategories($categories);
         $this->_addArticles($articles);
+        unlink($path);
     }
 
-    public function removeFile($path) {
-
-    }
 
     /** Get the current error.
      * @return string The error message
